@@ -8,11 +8,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 
 import com.eyeball.utils.annotation.Private;
-import com.eyeball.utils.logging.Logger;
 
 /**
  * 
@@ -24,8 +22,6 @@ import com.eyeball.utils.logging.Logger;
  * 
  */
 public class ChangeableOptionsReader implements IOptionsReader {
-
-	static Logger LOGGER = new Logger("Options-Reader");
 
 	private String path;
 
@@ -74,16 +70,15 @@ public class ChangeableOptionsReader implements IOptionsReader {
 	@Override
 	public void comment(String text) throws IOException {
 		String write = "# " + text;
-		LOGGER.info("I need " + write);
 		String[] stuff = read();
 		for (String c : stuff) {
 			if (c.contains("#"))
-				LOGGER.info(c);
+				continue;
 			if (write.equals(c))
-				break;
+				continue;
 			else {
 				write(write);
-				break;
+				continue;
 			}
 		}
 	}
@@ -241,16 +236,13 @@ public class ChangeableOptionsReader implements IOptionsReader {
 	 * 
 	 * @param text
 	 *            The text to be written.
+	 * @throws IOException
 	 */
 	@Private(reason = "My Stuff!")
-	public void write(String text) {
-		try {
-			PrintWriter out = new PrintWriter(new FileWriter(new File(path), true));
-			out.println(text);
-			out.close();
-		} catch (IOException e) {
-			LOGGER.error("Exception caught while writing to options file!");
-		}
+	public void write(String text) throws IOException {
+		PrintWriter out = new PrintWriter(new FileWriter(new File(path), true));
+		out.println(text);
+		out.close();
 	}
 
 	/**
@@ -259,9 +251,10 @@ public class ChangeableOptionsReader implements IOptionsReader {
 	 *            The array to write
 	 * @param name
 	 *            Writes the given array to file;
+	 * @throws IOException
 	 */
 	@Private(reason = "My Stuff!")
-	public void writeArray(ArrayList<?> arrayToWrite, String name) {
+	public void writeArray(ArrayList<?> arrayToWrite, String name) throws IOException {
 		write(name + "=\"");
 		Object[] stuff = arrayToWrite.toArray();
 		for (Object current : stuff)
@@ -277,39 +270,30 @@ public class ChangeableOptionsReader implements IOptionsReader {
 	 *            The key.
 	 * @param val
 	 *            The new value.
-	 * @return if it was successful.
+	 * @throws IOException
 	 */
-	public boolean setValue(String key, String val) {
-		try {
-			String[] textRaw = read();
+	public void setValue(String key, String val) throws IOException {
+		String[] textRaw = read();
 
-			ArrayList<String> newVals = new ArrayList<String>();
+		ArrayList<String> newVals = new ArrayList<String>();
 
-			for (String s : textRaw) {
-				LOGGER.info(s.startsWith(key + "="));
-				if (!s.startsWith(key + "=")) {
-					newVals.add(s + "\n");
-				} else {
-					newVals.add(key + "=" + val + "\n");
-					LOGGER.info(key + "=" + val + "\n");
-				}
+		for (String s : textRaw) {
+			if (!s.startsWith(key + "=")) {
+				newVals.add(s + "\n");
+			} else {
+				newVals.add(key + "=" + val + "\n");
 			}
-
-			// Now clear file.
-			File f = new File(path);
-			FileWriter fw = new FileWriter(f, false);
-
-			for (String string : newVals) {
-				LOGGER.info(string);
-				fw.write(string);
-			}
-
-			fw.close();
-
-		} catch (IOException e) {
-			return false;
 		}
-		return true;
+
+		// Now clear file.
+		File f = new File(path);
+		FileWriter fw = new FileWriter(f, false);
+
+		for (String string : newVals) {
+			fw.write(string);
+		}
+
+		fw.close();
 
 	}
 
