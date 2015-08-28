@@ -10,6 +10,10 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 
+import com.eyeball.html4j.elements.HEAD;
+import com.eyeball.html4j.elements.HTML;
+import com.eyeball.html4j.elements.HTMLTEXT;
+
 public class ClientConnection extends Thread {
 
 	Socket client;
@@ -25,6 +29,7 @@ public class ClientConnection extends Thread {
 
 	@Override
 	public void run() {
+		BufferedWriter out = null;
 		try {
 			System.out.print((char) 27 + "[0m");
 			BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
@@ -34,10 +39,7 @@ public class ClientConnection extends Thread {
 			System.out.println("Got request from client: " + client.getInetAddress().getHostAddress());
 			System.out.println(requestType.toUpperCase() + ": " + requestPath);
 
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
-			out.write(
-					"<!DOCTYPE html><html><head><title>Hello</title></head><body><h1 style=\"text-align: center;\">Hello</h1></body></html>");
-			out.close();
+			out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
 
 			File views = new File(server.getParentFile(), "views/");
 			String additional = "";
@@ -48,31 +50,73 @@ public class ClientConnection extends Thread {
 			else {
 				requestedFile = requestPath;
 			}
-			if (requestedFile.endsWith(".html"))
+			if (requestedFile.endsWith(".html")) {
 				additional = ".view";
+			}
 			File pageController = new File(views, requestedFile + additional);
 			BufferedReader input = null;
 			try {
 				input = new BufferedReader(new FileReader(pageController));
+				out.write("HTTP/1.0 200 OK\n");
 			} catch (IOException e) {
 				System.out.print((char) 27 + "[0m" + (char) 27 + "[31m");
 				System.out.println(requestType.toUpperCase() + " failed --- 404 not found!");
 				System.out.print((char) 27 + "[0m");
+				if (!(out == null)) {
+					out.write("HTTP/1.1 404 Not Found\n");
+					out.write("Content-Type: text/html\n\n\n");
+					try {
+						BufferedReader read404 = new BufferedReader(
+								new FileReader(new File(views.getParentFile(), "errors/404.html")));
+						for (String line = read404.readLine(); line != null; line = read404.readLine()) {
+							out.write(line + "\n");
+						}
+						read404.close();
+						out.flush();
+						out.close();
+					} catch (IOException e2) {
+						e.printStackTrace();
+					}
+				}
 				return;
 			}
 
+			if (requestedFile.endsWith(".html")) {
+				out.write("Content-Type: text/html\n\n\n");
+			} else {
+				out.write("Content-Type: text/" + requestedFile.split("[\\w]*\\.([\\w]*)")[0] + "\n\n\n");
+			}
 			ArrayList<String> lines = new ArrayList<String>();
 			for (String line = input.readLine(); line != null; line = input.readLine()) {
-				lines.add(line);
+				StringBuilder lineBuilder = new StringBuilder();
+				String last = "";
+				for (String c : line.split("")) {
+					if (last.equals(" ") && c.equals(" "))
+						continue;
+					lineBuilder.append(c);
+				}
+				lines.add(lineBuilder.toString());
 			}
 			input.close();
-			// BufferedWriter out = new BufferedWriter(new
-			// OutputStreamWriter(client.getOutputStream()));
-			// out.write(
-			// "<html><head><title>Hello</title></head><body><h1
-			// style=\"text-align: center;\">Hello</h1></body></html>");
-			// out.close();
+			HTML html = new HTML();
+			HEAD head = new HEAD();
+			for (String line : lines) {
+				if (line.startsWith("reqire script")) {
+					HTMLTEXT script = new HTMLTEXT();
+					script.setText("<script src=\"" + line.substring("reqire script ".length()) + "\"></script>");
+					head.addElement(script);
+				} else if (line.startsWith("title")) {
+					HTMLTEXT script = new HTMLTEXT();
+					script.setText("<title>" + line.substring("title ".length()) + "</title>");
+					head.addElement(script);
+				}
+			}
+			html.addElement(head);
+			out.write(html.getSource(0));
 			System.out.println(pageController.getAbsolutePath());
+
+			out.flush();
+			out.close();
 		} catch (Exception e) {
 			System.out.print((char) 27 + "[31m" + (char) 27 + "[1m");
 			System.out.println("Error in running server --- " + e.getClass().getName() + ": " + e.getMessage());
