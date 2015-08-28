@@ -1,11 +1,18 @@
 package com.eyeball.simpleserver;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 
+import com.eyeball.html4j.elements.BODY;
+import com.eyeball.html4j.elements.HEAD;
+import com.eyeball.html4j.elements.HTML;
+import com.eyeball.html4j.elements.HTMLTEXT;
+import com.eyeball.html4j.elements.P;
 import com.eyeball.simpleserver.run.ServerListener;
 import com.eyeball.utils.optionreading.ChangeableOptionsReader;
 import com.eyeball.utils.optionreading.OptionsReader;
@@ -36,8 +43,8 @@ public class Main {
 	}
 
 	private static void printMode(String name, String path) {
-		System.out.println((char) 27 + "[32m" + (char) 27 + "[1m" + name + " " + (char) 27 + "[0m" + (char) 27 + "[1m"
-				+ path);
+		System.out.println(
+				(char) 27 + "[32m" + (char) 27 + "[1m" + name + " " + (char) 27 + "[0m" + (char) 27 + "[1m" + path);
 	}
 
 	public static void printHelp() {
@@ -48,7 +55,7 @@ public class Main {
 				"Use the \"settings\" command to edit the server settings.");
 	}
 
-	public static void main(String args[]) {
+	public static void main(String args[]) throws InterruptedException {
 		try {
 			Runtime.getRuntime().addShutdownHook(new Thread("Shutdown-Thread") {
 				@Override
@@ -176,6 +183,8 @@ public class Main {
 		System.out.println(" " + filename);
 	}
 
+	static boolean isDone = false;
+
 	private static void generateServer(File path) {
 		try {
 			path.mkdir();
@@ -183,11 +192,10 @@ public class Main {
 			serverFiles.mkdir();
 			createFilePrint(".server");
 			File viewsFolder = new File(path, "views/");
-			viewsFolder.mkdir();
-			createFilePrint("views/");
 			File serverDetails = new File(serverFiles, "settings.ini");
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 			OptionsReader serverDetailsOR = new OptionsReader(serverDetails);
+			createFilePrint(".server/settings.ini");
 			System.out.print((char) 27 + "[36m" + (char) 27 + "[1m");
 			String name = "";
 			while (name.trim().equals("")) {
@@ -196,9 +204,44 @@ public class Main {
 			}
 			serverDetailsOR.readString("name", name);
 			System.out.print((char) 27 + "[32m" + (char) 27 + "[1m");
-			System.out.println("Server name: " + (char) 27 + "[0m" + (char) 27 + "[1m" + name);
-			createFilePrint(".server/settings.ini");
+			System.out.println("  Server name: " + (char) 27 + "[0m" + (char) 27 + "[1m" + name);
+			createFilePrint("views/");
+			System.out.print((char) 27 + "[32m" + (char) 27 + "[1m");
+			System.out.print("  Generating error pages");
 			System.out.print((char) 27 + "[0m");
+			viewsFolder.mkdir();
+			createErrorPages(serverFiles);
+			new Thread() {
+				int dots = 0;
+
+				@SuppressWarnings("deprecation")
+				public void run() {
+					System.out.print("   ");
+					int finalDots = 4;
+					while (!isDone) {
+						if (!(dots == finalDots)) {
+							for (int i = 0; i < finalDots; i++) {
+								System.out.print("\b");
+							}
+							for (int i = 0; i < dots; i++) {
+								System.out.print(".");
+							}
+							for (int i = 0; i < (finalDots - dots); i++) {
+								System.out.print(" ");
+							}
+							dots++;
+						} else {
+							System.out.print("\b\b\b.  ");
+							dots = 1;
+						}
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+						}
+					}
+					this.stop();
+				};
+			}.start();
 		} catch (IOException e) {
 			System.out.print((char) 27 + "[31m" + (char) 27 + "[1m");
 			System.out.println("Could not create server --- java.io.IOException: " + e.getMessage());
@@ -206,6 +249,43 @@ public class Main {
 			System.out.print((char) 27 + "[0m");
 			System.exit(2);
 		}
+	}
+
+	private static void createErrorPages(File serverFiles) {
+		serverFiles = new File(serverFiles.getParentFile(), "errors/");
+		serverFiles.mkdir();
+		try {
+			BufferedWriter write404 = new BufferedWriter(new FileWriter(new File(serverFiles, "404.html")));
+			BufferedWriter write500 = new BufferedWriter(new FileWriter(new File(serverFiles, "500.html")));
+			BufferedWriter write403 = new BufferedWriter(new FileWriter(new File(serverFiles, "403.html")));
+			BufferedWriter write401 = new BufferedWriter(new FileWriter(new File(serverFiles, "401.html")));
+			write404.write(getErrorPageHTML(404, "Page Not Found!").getSource(0));
+			write403.write(getErrorPageHTML(403, "Unauthorized!").getSource(0));
+			write401.write(getErrorPageHTML(401, "Unauthorized!").getSource(0));
+			write500.write(getErrorPageHTML(500, "Internal Server Error").getSource(0));
+			write404.close();
+			write401.close();
+			write403.close();
+			write500.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		isDone = true;
+	}
+
+	private static HTML getErrorPageHTML(int error, String errorText) {
+		HTML html = new HTML();
+		HEAD head = new HEAD();
+		BODY body = new BODY();
+		HTMLTEXT title = new HTMLTEXT("<h1>ERROR: " + error + " --- " + errorText + "</h1>");
+		P text = new P();
+		text.addElement(new HTMLTEXT("<i><sub>Powered by SimpleServer</sub></i>"));
+		body.addElement(title);
+		body.addElement(new HTMLTEXT("<hr>"));
+		body.addElement(text);
+		html.addElement(head);
+		html.addElement(body);
+		return html;
 	}
 
 }

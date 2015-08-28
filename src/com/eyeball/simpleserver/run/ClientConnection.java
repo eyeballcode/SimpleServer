@@ -1,10 +1,12 @@
 package com.eyeball.simpleserver.run;
 
-import java.awt.datatransfer.StringSelection;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 
@@ -24,26 +26,52 @@ public class ClientConnection extends Thread {
 	@Override
 	public void run() {
 		try {
+			System.out.print((char) 27 + "[0m");
 			BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 			String request = in.readLine();
 			String requestType = request.split(" ")[0];
 			String requestPath = request.split(" ")[1];
 			System.out.println("Got request from client: " + client.getInetAddress().getHostAddress());
 			System.out.println(requestType.toUpperCase() + ": " + requestPath);
-			File views = new File(server, "views/");
+
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
+			out.write(
+					"<!DOCTYPE html><html><head><title>Hello</title></head><body><h1 style=\"text-align: center;\">Hello</h1></body></html>");
+			out.close();
+
+			File views = new File(server.getParentFile(), "views/");
 			String additional = "";
-			String requestedFile = requestPath.split("/")[requestPath.split("/").length - 1];
-			if (!requestedFile.endsWith(".html"))
-				additional = "/index.html.view";
-			else
+			String[] paths = requestPath.split("/");
+			String requestedFile = "";
+			if (paths.length == 0 | requestPath.trim().equals("/"))
+				requestedFile = "index.html";
+			else {
+				requestedFile = requestPath;
+			}
+			if (requestedFile.endsWith(".html"))
 				additional = ".view";
-			File pageController = new File(views, requestPath + additional);
-			BufferedReader input = new BufferedReader(new FileReader(pageController));
+			File pageController = new File(views, requestedFile + additional);
+			BufferedReader input = null;
+			try {
+				input = new BufferedReader(new FileReader(pageController));
+			} catch (IOException e) {
+				System.out.print((char) 27 + "[0m" + (char) 27 + "[31m");
+				System.out.println(requestType.toUpperCase() + " failed --- 404 not found!");
+				System.out.print((char) 27 + "[0m");
+				return;
+			}
+
 			ArrayList<String> lines = new ArrayList<String>();
 			for (String line = input.readLine(); line != null; line = input.readLine()) {
 				lines.add(line);
 			}
 			input.close();
+			// BufferedWriter out = new BufferedWriter(new
+			// OutputStreamWriter(client.getOutputStream()));
+			// out.write(
+			// "<html><head><title>Hello</title></head><body><h1
+			// style=\"text-align: center;\">Hello</h1></body></html>");
+			// out.close();
 			System.out.println(pageController.getAbsolutePath());
 		} catch (Exception e) {
 			System.out.print((char) 27 + "[31m" + (char) 27 + "[1m");
