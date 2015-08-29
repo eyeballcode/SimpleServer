@@ -8,11 +8,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
-import java.util.ArrayList;
-
-import com.eyeball.html4j.elements.HEAD;
-import com.eyeball.html4j.elements.HTML;
-import com.eyeball.html4j.elements.HTMLTEXT;
 
 public class ClientConnection extends Thread {
 
@@ -34,6 +29,9 @@ public class ClientConnection extends Thread {
 			System.out.print((char) 27 + "[0m");
 			BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 			String request = in.readLine();
+			if (request == null)
+				// Client disconnected.
+				return;
 			String requestType = request.split(" ")[0];
 			String requestPath = request.split(" ")[1];
 			System.out.println("Got request from client: " + client.getInetAddress().getHostAddress());
@@ -54,7 +52,9 @@ public class ClientConnection extends Thread {
 				additional = ".view";
 			}
 			File pageController = new File(views, requestedFile + additional);
+			File pageHTML = new File(views, requestedFile);
 			BufferedReader input = null;
+			BufferedReader pageHTMLReader = null;
 			try {
 				input = new BufferedReader(new FileReader(pageController));
 				out.write("HTTP/1.0 200 OK\n");
@@ -68,9 +68,18 @@ public class ClientConnection extends Thread {
 					try {
 						BufferedReader read404 = new BufferedReader(
 								new FileReader(new File(views.getParentFile(), "errors/404.html")));
-						for (String line = read404.readLine(); line != null; line = read404.readLine()) {
-							out.write(line + "\n");
+						out.write("<html>\n");
+						try {
+							BufferedReader read404View = new BufferedReader(
+									new FileReader(new File(views.getParentFile(), "errors/404.html.view")));
+							out.write(Helper.getHTMLSource(read404View).getSource(2));
+						} catch (Exception e1) {
 						}
+
+						for (String line = read404.readLine(); line != null; line = read404.readLine()) {
+							out.write("  " + line + "\n");
+						}
+						out.write("</html>");
 						read404.close();
 						out.flush();
 						out.close();
@@ -80,40 +89,29 @@ public class ClientConnection extends Thread {
 				}
 				return;
 			}
+			boolean customHTML = false;
+			try {
+				pageHTMLReader = new BufferedReader(new FileReader(pageHTML));
+				customHTML = true;
+			} catch (Exception e) {
+
+			}
 
 			if (requestedFile.endsWith(".html")) {
 				out.write("Content-Type: text/html\n\n\n");
 			} else {
 				out.write("Content-Type: text/" + requestedFile.split("[\\w]*\\.([\\w]*)")[0] + "\n\n\n");
 			}
-			ArrayList<String> lines = new ArrayList<String>();
-			for (String line = input.readLine(); line != null; line = input.readLine()) {
-				StringBuilder lineBuilder = new StringBuilder();
-				String last = "";
-				for (String c : line.split("")) {
-					if (last.equals(" ") && c.equals(" "))
-						continue;
-					lineBuilder.append(c);
+			out.write("<html>");
+			out.write(Helper.getHTMLSource(input).getSource(2));
+			if (customHTML) {
+				out.write("  <body>");
+				for (String line = pageHTMLReader.readLine(); line != null; line = pageHTMLReader.readLine()) {
+					out.write("  " + line + "\n");
 				}
-				lines.add(lineBuilder.toString());
+				out.write("</body>");
 			}
-			input.close();
-			HTML html = new HTML();
-			HEAD head = new HEAD();
-			for (String line : lines) {
-				if (line.startsWith("reqire script")) {
-					HTMLTEXT script = new HTMLTEXT();
-					script.setText("<script src=\"" + line.substring("reqire script ".length()) + "\"></script>");
-					head.addElement(script);
-				} else if (line.startsWith("title")) {
-					HTMLTEXT script = new HTMLTEXT();
-					script.setText("<title>" + line.substring("title ".length()) + "</title>");
-					head.addElement(script);
-				}
-			}
-			html.addElement(head);
-			out.write(html.getSource(0));
-			System.out.println(pageController.getAbsolutePath());
+			out.write("</html>");
 
 			out.flush();
 			out.close();
@@ -124,5 +122,6 @@ public class ClientConnection extends Thread {
 			System.out.print((char) 27 + "[0m");
 			System.exit(2);
 		}
+
 	};
 }

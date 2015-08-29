@@ -9,8 +9,7 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 
 import com.eyeball.html4j.elements.BODY;
-import com.eyeball.html4j.elements.HEAD;
-import com.eyeball.html4j.elements.HTML;
+import com.eyeball.html4j.elements.DIV;
 import com.eyeball.html4j.elements.HTMLTEXT;
 import com.eyeball.html4j.elements.P;
 import com.eyeball.simpleserver.run.ServerListener;
@@ -194,6 +193,12 @@ public class UbuntuMain {
 			serverFiles.mkdir();
 			createFilePrint(".server");
 			File viewsFolder = new File(path, "views/");
+			File cssFolder = new File(path, "styles/");
+			File scriptFolder = new File(path, "scripts/");
+			cssFolder.mkdir();
+			createFilePrint("styles");
+			scriptFolder.mkdir();
+			createFilePrint("scripts");
 			File serverDetails = new File(serverFiles, "settings.ini");
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 			OptionsReader serverDetailsOR = new OptionsReader(serverDetails);
@@ -209,10 +214,11 @@ public class UbuntuMain {
 			System.out.println("  Server name: " + (char) 27 + "[0m" + (char) 27 + "[1m" + name);
 			createFilePrint("views/");
 			System.out.print((char) 27 + "[32m" + (char) 27 + "[1m");
-			System.out.print("  Generating error pages");
+			System.out.print("  Generating pages");
 			System.out.print((char) 27 + "[0m");
 			viewsFolder.mkdir();
 			createErrorPages(serverFiles);
+			createMainPage(serverFiles);
 			new Thread() {
 				int dots = 0;
 
@@ -253,6 +259,54 @@ public class UbuntuMain {
 		}
 	}
 
+	private static void createMainPage(File serverFiles) {
+		File indexFile = new File(serverFiles.getParentFile(), "views/index.html");
+		File indexViewFile = new File(serverFiles.getParentFile(), "views/index.html.view");
+		serverFiles.mkdir();
+		try {
+			BufferedWriter writeMain = new BufferedWriter(new FileWriter(indexFile));
+			BufferedWriter writeView = new BufferedWriter(new FileWriter(indexViewFile));
+			BODY body = new BODY();
+			DIV main = new DIV();
+			HTMLTEXT title = new HTMLTEXT("<h1 id=\"title\">You're up and ready to go!</h1>");
+			main.addElement(title);
+			main.addElement(new HTMLTEXT("<br>"));
+			P text = new P();
+			text.addElement(new HTMLTEXT("Just a note, edit the file <code>" + indexFile.getAbsolutePath()
+					+ "</code> and <code>" + indexViewFile.getAbsolutePath() + "</code> to edit this page."));
+			text.clazz = "text";
+			main.addElement(text);
+			main.id = "main";
+			body.addElement(main);
+			writeMain.write(body.getSource(0));
+			writeView.write("require style http://teamfreehugs.github.io/experimental/css/base.css\n");
+			writeView.write("define style\n");
+			writeView.write("  #title {\n");
+			writeView.write("    font-size: 30px;\n");
+			writeView.write("  }\n");
+			writeView.write("  .text {\n");
+			writeView.write("    margin-left: 5px;\n");
+			writeView.write("  }\n");
+			writeView.write("  #main {\n");
+			writeView.write("    width: 500px;\n");
+			writeView.write("    position: absolute;\n");
+			writeView.write("    margin-left: 250px;\n");
+			writeView.write("    margin-top: 0;\n");
+			writeView.write("    background-color: #FFFFFF;\n");
+			writeView.write("  }\n");
+			writeView.write("  body {\n");
+			writeView.write("    margin-top: 0px;\n");
+			writeView.write("    background-color: #C2C2C2;\n");
+			writeView.write("  }\n");
+			writeView.write("end\n");
+			writeView.close();
+			writeMain.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		isDone = true;
+	}
+
 	private static void createErrorPages(File serverFiles) {
 		serverFiles = new File(serverFiles.getParentFile(), "errors/");
 		serverFiles.mkdir();
@@ -275,9 +329,7 @@ public class UbuntuMain {
 		isDone = true;
 	}
 
-	private static HTML getErrorPageHTML(int error, String errorText) {
-		HTML html = new HTML();
-		HEAD head = new HEAD();
+	private static BODY getErrorPageHTML(int error, String errorText) {
 		BODY body = new BODY();
 		HTMLTEXT title = new HTMLTEXT("<h1>ERROR: " + error + " --- " + errorText + "</h1>");
 		P text = new P();
@@ -285,9 +337,7 @@ public class UbuntuMain {
 		body.addElement(title);
 		body.addElement(new HTMLTEXT("<hr>"));
 		body.addElement(text);
-		html.addElement(head);
-		html.addElement(body);
-		return html;
+		return body;
 	}
 
 }
