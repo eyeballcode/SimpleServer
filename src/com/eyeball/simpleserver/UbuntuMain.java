@@ -90,8 +90,7 @@ public class UbuntuMain {
 			} else if (args[0].equals("settings")) {
 				editSettings();
 			} else if (args[0].equals("info")) {
-				File serverFiles = new File(System.getProperty("user.dir") + "/.server/");
-				printMode("Info", serverFiles.getParentFile().getAbsolutePath());
+				info();
 			} else {
 				System.out.print((char) 27 + "[31m" + (char) 27 + "[1m");
 				System.err.println("Unkown command: " + args[0]);
@@ -106,6 +105,28 @@ public class UbuntuMain {
 			System.out.println("SimpleServer Help");
 			System.out.println("Here are the options:");
 			printHelp();
+		}
+	}
+
+	private static void info() {
+		File serverFiles = new File(System.getProperty("user.dir") + "/.server/");
+		if (!serverFiles.exists()) {
+			System.out.print((char) 27 + "[31m" + (char) 27 + "[1m");
+			System.err.println("Could not edit server --- server not found!");
+			System.out.print((char) 27 + "[0m");
+			System.exit(1);
+		}
+		printMode("Info", serverFiles.getParentFile().getAbsolutePath());
+		try {
+			OptionsReader optionsReader = new OptionsReader(new File(serverFiles, "settings.ini"));
+			printMode("Name: ", optionsReader.readString("name", ""));
+			printMode("Allow-Control-Allow-Origin: ", optionsReader.readString("sop-control", ""));
+		} catch (IOException e) {
+			System.out.print((char) 27 + "[31m" + (char) 27 + "[1m");
+			System.out.println("Could not get server info --- java.io.IOException: " + e.getMessage());
+			e.printStackTrace();
+			System.out.print((char) 27 + "[0m");
+			System.exit(2);
 		}
 	}
 
@@ -215,7 +236,14 @@ public class UbuntuMain {
 				System.out.print("Please enter the server name: ");
 				name = in.readLine();
 			}
+			System.out.print((char) 27 + "[36m" + (char) 27 + "[1m");
+			String sop = "";
+			while (sop.trim().equals("")) {
+				System.out.print("Please enter the value for `Access-Control-Allow-Origin`: ");
+				sop = in.readLine();
+			}
 			serverDetailsOR.readString("name", name);
+			serverDetailsOR.readString("sop-control", sop);
 			System.out.print((char) 27 + "[32m" + (char) 27 + "[1m");
 			System.out.println("  Server name: " + (char) 27 + "[0m" + (char) 27 + "[1m" + name);
 			createFilePrint("views/");

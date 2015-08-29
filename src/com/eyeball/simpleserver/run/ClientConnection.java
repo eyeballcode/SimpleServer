@@ -52,6 +52,40 @@ public class ClientConnection extends Thread {
 	}
 
 	private void doPost(String requestType, String requestPath) {
+		BufferedWriter out;
+		try {
+			out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
+			File views = new File(server.getParentFile(), "posts/");
+			String[] paths = requestPath.split("/");
+			String requestedFile = "";
+			if (paths.length == 0 | requestPath.trim().equals("/"))
+				requestedFile = "index.html";
+			else {
+				requestedFile = requestPath;
+			}
+			File file = new File(views.getParentFile(), "files/" + requestedFile + ".post");
+			BufferedReader pageReader = null;
+			try {
+				pageReader = new BufferedReader(new FileReader(file));
+				out.write("HTTP/1.0 200 OK\n");
+				out.write("Content-Type: text/plain\n");
+				if (!Helper.getSOPControl(server.getParentFile()).equals(""))
+					out.write("Access-Control-Allow-Origin: " + Helper.getSOPControl(server.getParentFile()));
+				out.write("\n\n");
+				for (String line = pageReader.readLine(); line != null; line = pageReader.readLine()) {
+					out.write(line + "\n");
+				}
+				pageReader.close();
+				out.close();
+				return;
+			} catch (IOException e) {
+				do404(requestType, out, views, e);
+				if (pageReader != null)
+					pageReader.close();
+				return;
+			}
+		} catch (IOException e) {
+		}
 	}
 
 	private void doGet(String requestType, String requestPath) throws IOException {
@@ -91,6 +125,8 @@ public class ClientConnection extends Thread {
 					String type = parts[parts.length - 1];
 					out.write(type);
 				}
+				if (!Helper.getSOPControl(server.getParentFile()).equals(""))
+					out.write("\nAccess-Control-Allow-Origin: " + Helper.getSOPControl(server.getParentFile()));
 				out.write("\n\n");
 				for (String line = pageReader.readLine(); line != null; line = pageReader.readLine()) {
 					out.write(line + "\n");
@@ -99,7 +135,6 @@ public class ClientConnection extends Thread {
 				out.close();
 				return;
 			} catch (IOException e) {
-				e.printStackTrace();
 				do404(requestType, out, views, e);
 				if (pageReader != null)
 					pageReader.close();
@@ -129,10 +164,14 @@ public class ClientConnection extends Thread {
 		}
 
 		if (requestedFile.endsWith(".html")) {
-			out.write("Content-Type: text/html\n\n\n");
+			out.write("Content-Type: text/html");
 		} else {
-			out.write("Content-Type: text/" + requestedFile.split("[\\w]*\\.([\\w]*)")[0] + "\n\n\n");
+			out.write("Content-Type: text/" + requestedFile.split("[\\w]*\\.([\\w]*)")[0]);
 		}
+		out.write("\n");
+		if (!Helper.getSOPControl(server.getParentFile()).equals(""))
+			out.write("Access-Control-Allow-Origin: " + Helper.getSOPControl(server.getParentFile()));
+		out.write("\n\n");
 		out.write("<html>");
 		out.write(Helper.getHTMLSource(input).getSource(2));
 		if (customHTML) {
@@ -154,7 +193,10 @@ public class ClientConnection extends Thread {
 		System.out.print((char) 27 + "[0m");
 		if (!(out == null)) {
 			out.write("HTTP/1.1 404 Not Found\n");
-			out.write("Content-Type: text/html\n\n\n");
+			out.write("Content-Type: text/html\n");
+			if (!Helper.getSOPControl(server.getParentFile()).equals(""))
+				out.write("Access-Control-Allow-Origin: " + Helper.getSOPControl(server.getParentFile()));
+			out.write("\n\n");
 			try {
 				BufferedReader read404 = new BufferedReader(
 						new FileReader(new File(views.getParentFile(), "errors/404.html")));
@@ -162,7 +204,7 @@ public class ClientConnection extends Thread {
 				try {
 					BufferedReader read404View = new BufferedReader(
 							new FileReader(new File(views.getParentFile(), "errors/404.html.view")));
-					out.write(Helper.getHTMLSource(read404View).getSource(2));
+					out.write(Helper.getHTMLSource(read404View).getSource(2) + "\n");
 				} catch (Exception e1) {
 				}
 

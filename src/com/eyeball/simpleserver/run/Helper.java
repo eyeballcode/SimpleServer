@@ -1,11 +1,13 @@
 package com.eyeball.simpleserver.run;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
 import com.eyeball.html4j.elements.HEAD;
 import com.eyeball.html4j.elements.HTMLTEXT;
+import com.eyeball.utils.optionreading.OptionsReader;
 
 public class Helper {
 
@@ -73,6 +75,12 @@ public class Helper {
 			}
 		}
 		return head;
+	}
+
+	public static String getSOPControl(File server) throws IOException {
+		File serverSettting = new File(server, ".server/settings.ini");
+		OptionsReader or = new OptionsReader(serverSettting);
+		return or.readString("sop-control", "");
 	}
 
 }
