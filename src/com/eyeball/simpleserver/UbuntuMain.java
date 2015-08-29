@@ -192,17 +192,23 @@ public class UbuntuMain {
 			File serverFiles = new File(path, ".server/");
 			serverFiles.mkdir();
 			createFilePrint(".server");
-			File viewsFolder = new File(path, "views/");
-			File cssFolder = new File(path, "styles/");
-			File scriptFolder = new File(path, "scripts/");
-			cssFolder.mkdir();
-			createFilePrint("styles");
-			scriptFolder.mkdir();
-			createFilePrint("scripts");
+
 			File serverDetails = new File(serverFiles, "settings.ini");
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 			OptionsReader serverDetailsOR = new OptionsReader(serverDetails);
 			createFilePrint(".server/settings.ini");
+
+			File viewsFolder = new File(path, "views/");
+			File cssFolder = new File(path, "styles/");
+			File scriptFolder = new File(path, "scripts/");
+			File resourcesFolder = new File(path, "files/");
+			cssFolder.mkdir();
+			createFilePrint("styles");
+			scriptFolder.mkdir();
+			createFilePrint("scripts");
+			resourcesFolder.mkdir();
+			createFilePrint("files");
+
 			System.out.print((char) 27 + "[36m" + (char) 27 + "[1m");
 			String name = "";
 			while (name.trim().equals("")) {
