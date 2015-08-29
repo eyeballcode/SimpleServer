@@ -151,6 +151,14 @@ public class UbuntuMain {
 			}
 			System.out.print((char) 27 + "[0m");
 			serverDetailsOR.setValue("name", name);
+			String cors = "";
+			while (cors.equals("")) {
+				System.out.print((char) 27 + "[36m" + (char) 27 + "[1m");
+				System.out.print("Please enter the value for `Access-Control-Allow-Origin`: " + (char) 27 + "[0m");
+				cors = in.readLine();
+			}
+			System.out.print((char) 27 + "[0m");
+			serverDetailsOR.setValue("sop-control", cors);
 			in.close();
 		} catch (IOException e) {
 			System.out.print((char) 27 + "[31m" + (char) 27 + "[1m");
