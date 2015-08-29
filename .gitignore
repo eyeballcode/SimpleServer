@@ -2,3 +2,9 @@ bin/
 .project
 .settings
 .classpath
+errors/
+scripts/
+styles/
+files/
+views/
+.server/

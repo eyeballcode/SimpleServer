@@ -1,0 +1,9 @@
+if [ ! "$(which java)"=="" ]; then
+  echo -e "\e[31m\e[1mSorry, you don't have Java installed. Install it and come back.\e[0m"
+  exit 1
+fi
+
+if [ ! -f SimpleServer.jar ]; then
+  echo -e "\e[32m\e[1mDownloading SimpleServer.jar...\e[0m"
+fi
+java -jar SimpleServer.jar $1 $2
